@@ -1,0 +1,27 @@
+---
+title: "Exams"
+author: "Aaron Vick"
+date: "2022-11-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rpart)
+```
+
+```{r}
+
+DATA <- read.csv("Exams.csv")
+
+DATA$Final_Grade <- (DATA$math.score + DATA$reading.score + DATA$writing.score) / 3
+DATA$Passing <- ifelse(DATA$Final_Grade >= 90, 1, 0)
+
+ExamTree <- rpart(Passing~. - Final_Grade - math.score - reading.score - writing.score, data = DATA)
+ExamTree
+summary(ExamTree)
+plot(ExamTree)
+text(ExamTree, digits = 2)
+
+summary(ExamTree)
+```
