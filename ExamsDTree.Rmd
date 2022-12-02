@@ -8,20 +8,55 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(rpart)
+library(caret)
+library(tidyverse)
 ```
 
-```{r}
+```{r decision tree}
 
 DATA <- read.csv("Exams.csv")
 
 DATA$Final_Grade <- (DATA$math.score + DATA$reading.score + DATA$writing.score) / 3
 DATA$Passing <- ifelse(DATA$Final_Grade >= 90, 1, 0)
 
-ExamTree <- rpart(Passing~. - Final_Grade - math.score - reading.score - writing.score, data = DATA)
+ExamTree <- rpart(Passing ~. - Final_Grade - math.score - reading.score - writing.score, data = DATA)
 ExamTree
 summary(ExamTree)
 plot(ExamTree)
 text(ExamTree, digits = 2)
 
 summary(ExamTree)
+
 ```
+
+
+```{r random forest}
+
+set.seed(542)
+
+DATA$Passing.fac <- as.factor(ifelse(DATA$Passing == 1, "yes", "no"))
+
+train_rows <- sample(1:nrow(DATA), size = nrow(DATA) / 2, replace = F)
+
+train_set <- DATA[train_rows,]
+test_set <- DATA[-train_rows,]
+
+tC <- trainControl(method = "cv", 
+             number = 10, 
+             savePredictions = TRUE, 
+             classProbs = TRUE, 
+             verboseIter = TRUE)
+
+rf <- train(Passing.fac ~. - Final_Grade - math.score - reading.score - writing.score, 
+            method = "rf", 
+            trControl = tC, 
+            preProcess = c("center","scale"), 
+            ntree = 50,
+            data = train_set)
+
+plot(rf)
+
+mean(predict(test_set, object = rf) == test_set$Passing.fac)
+
+```
+
