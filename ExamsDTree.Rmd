@@ -10,25 +10,54 @@ knitr::opts_chunk$set(echo = TRUE)
 library(rpart)
 library(caret)
 library(tidyverse)
+library(rpart.plot)
 ```
 
-```{r decision tree}
+```{r data gathering}
 
 DATA <- read.csv("Exams.csv")
 
 DATA$Final_Grade <- (DATA$math.score + DATA$reading.score + DATA$writing.score) / 3
-DATA$Passing <- ifelse(DATA$Final_Grade >= 90, 1, 0)
+DATA$Passing <- ifelse(DATA$Final_Grade >= 70, 1, 0)
 DATA$Passing.fac <- as.factor(ifelse(DATA$Passing == 1, "yes", "no"))
 
 DATA <- DATA %>% select(1:5, 11)
 
+```
+
+```{r decision tree}
+
 ExamTree <- rpart(Passing.fac ~ ., data = DATA)
 ExamTree
-summary(ExamTree)
-plot(ExamTree)
-text(ExamTree, digits = 2)
+prp(ExamTree, box.palette = "Reds", tweak = 1.2)
 
-summary(ExamTree)
+```
+
+```{r decision tree with cross validation}
+
+set.seed(542)
+
+train_rows <- sample(1:nrow(DATA), size = nrow(DATA) / 2
+                     , replace = F)
+
+train_set <- DATA[train_rows,]
+test_set <- DATA[-train_rows,]
+
+tC <- trainControl(method = "cv", 
+             number = 10, 
+             savePredictions = TRUE, 
+             classProbs = TRUE, 
+             verboseIter = TRUE)
+
+dccv <- train(Passing.fac ~ ., 
+            method = "rpart", 
+            trControl = tC, 
+            preProcess = c("center","scale"), 
+            data = train_set)
+
+prp(dccv$finalModel, box.palette = "Reds", tweak = 1.2)
+
+dccv$results
 
 ```
 
@@ -55,10 +84,6 @@ rf <- train(Passing.fac ~ .,
             preProcess = c("center","scale"), 
             ntree = 50,
             data = train_set)
-
-plot(rf)
-
-mean(predict(test_set, object = rf) == test_set$Passing.fac)
 
 rf$results
 
