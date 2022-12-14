@@ -1,0 +1,62 @@
+---
+title: "Decision Tree"
+author: "Aaron Vick"
+date: "2022-11-28"
+output: html_document
+---
+
+title: "Exams"
+author: "Aaron Vick"
+date: "2022-11-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rpart)
+library(caret)
+library(rpart.plot)
+library(tidyverse)
+```
+
+```{r decision tree}
+DATA <- read.csv("Exams.csv")
+DATA$Final_Grade <- (DATA$math.score + DATA$reading.score + DATA$writing.score) / 3
+DATA$Passing <- ifelse(DATA$Final_Grade >= 80, 1, 0)
+DATA$Passing.fac <- as.factor(ifelse(DATA$Passing == 1, "yes", "no"))
+
+DATA2 <- DATA %>% select(-c(math.score, reading.score, writing.score, Final_Grade, Passing))
+
+train_rows <- sample(1:nrow(DATA2), size = nrow(DATA) / 2, replace = F)
+train_set <- DATA2[train_rows,]
+test_set <- DATA2[-train_rows,]
+
+tC <- trainControl(method = "cv",
+                   number = 10,
+                   savePredictions = T,
+                   classProbs = T,
+                   verboseIter = T)
+
+dt <- train(Passing.fac ~ .,
+             data = DATA2,
+             method = 'rpart',
+             trControl = trainControl(method = "cv", number = 10),
+             tuneGrid = data.frame(cp=seq(from = 0.05, to = 0.25, by = 0.05))
+             )
+#The decision tree model appears to be predicting passing rate with an accuracy of 78.9% on the test set
+dt
+
+#This is a visualization of the decision tree
+#The most important factors that attribute to Passing with an 80% or higher score are:
+#Standard Lunch, Master's level education and race ethnicity not in group A or group C.
+rtree <- rpart(Passing.fac ~ ., data = DATA2)
+summary(rtree)
+
+
+rpart.plot(rtree, type = 2)
+
+```
+
+
+
+```
