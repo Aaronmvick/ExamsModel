@@ -1,0 +1,122 @@
+---
+title: "Summary Stats / Regression"
+author: "Daniel Stephens"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup}
+library(dplyr)
+library(tidyverse)
+library(caret)
+data = read.csv("examsdata.csv")
+```
+
+```{r Create total grades / passing metric}
+data$Final_Grade <- (data$math.score + data$reading.score + data$writing.score) / 3
+data$Passing <- ifelse(data$Final_Grade >= 90, 1, 0)
+```
+
+
+```{r ethnicity counts}
+table(data$race.ethnicity)
+```
+
+
+```{r level of education counts}
+table(data$parental.level.of.education)
+```
+
+
+```{r free lunch counts}
+table(data$lunch)
+```
+
+```{r Avg grade by race}
+data %>% 
+  group_by(race.ethnicity)%>%
+  summarize(meangrade = mean(Final_Grade))
+```
+
+```{r Avg grade by parental education}
+data %>%
+  group_by(parental.level.of.education) %>%
+  summarise(meangrade = mean(Final_Grade))
+```
+
+```{r Avg grade by free lunch}
+data %>%
+  group_by(lunch)%>%
+  summarise(meangrade = mean(Final_Grade))
+
+```
+
+```{r Data manipulation}
+data1<- data%>%
+  select(gender, parental.level.of.education, race.ethnicity, lunch, test.preparation.course, Final_Grade)
+
+data2 <- data %>%
+  select(gender,parental.level.of.education, race.ethnicity, lunch, test.preparation.course, math.score, reading.score, writing.score)
+```
+
+
+
+```{r Packages}
+library(factoextra)
+library(cluster)
+```
+
+```{r dummy variables}
+
+regdata <- data1
+
+regdata$highschool <- ifelse(regdata$parental.level.of.education == "high school", 1, 0)
+regdata$some_hs <- ifelse(regdata$parental.level.of.education == "some high school", 1, 0)
+regdata$some_college <- ifelse(regdata$parental.level.of.education == "some college", 1, 0)
+regdata$associate_deg <- ifelse(regdata$parental.level.of.education == "associate's degree", 1, 0)
+regdata$bachelor_deg <- ifelse(regdata$parental.level.of.education == "bachelor's degree", 1, 0)	
+regdata$masters <- ifelse(regdata$parental.level.of.education == "master's degree", 1, 0)
+regdata$testprep <- ifelse(regdata$test.preparation.course == "completed", 1, 0)
+regdata$freelunch <- ifelse(regdata$lunch == "free/reduced", 1, 0)
+regdata$gendermale <- ifelse(regdata$gender == "male", 1, 0)
+regdata$raceA <- ifelse(regdata$race.ethnicity == "group A", 1, 0)
+regdata$raceB <- ifelse(regdata$race.ethnicity == "group B", 1, 0)
+regdata$raceC <- ifelse(regdata$race.ethnicity == "group C", 1, 0)
+regdata$raceD <- ifelse(regdata$race.ethnicity == "group D", 1, 0)
+regdata$raceE <- ifelse(regdata$race.ethnicity == "group E", 1, 0)
+```
+
+```{r Regression for Final grade based on all variables}
+
+dummies <- regdata %>%
+  select(Final_Grade, highschool, some_hs, some_college, associate_deg, bachelor_deg, masters, testprep, freelunch, gendermale, raceA, raceB, raceC, raceD, raceE)
+
+lm1 = lm(Final_Grade~ some_hs + some_college + associate_deg + bachelor_deg + masters + testprep + freelunch + gendermale + raceA + raceB + raceC + raceD , data= dummies)
+
+summary(lm1) #based on highschool as baseline education level, race E if all other races == 0
+```
+
+```{r KNN}
+
+train(Final_Grade ~ ., data=dummies, method='knn', trControl = trainControl(method = "cv", number = 10))
+
+```
+
+```{r K-nearest neighbors model}
+
+fit <- train(Final_Grade ~ .,
+    data = dummies ,
+    method = "knn",
+    trControl = trainControl(method = "cv", number = 10),
+    tuneGrid = data.frame(k=seq(from=1, to=10, by=1))
+)
+plot(fit)
+
+```
+
+```{r Correlations between variables}
+library(GGally)
+dummies%>%
+  ggpairs()
+
+```
