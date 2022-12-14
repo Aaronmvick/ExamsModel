@@ -15,6 +15,8 @@ library(rpart.plot)
 
 ```{r data gathering}
 
+set.seed(542)
+
 DATA <- read.csv("Exams.csv")
 
 DATA$Final_Grade <- (DATA$math.score + DATA$reading.score + DATA$writing.score) / 3
@@ -23,25 +25,30 @@ DATA$Passing.fac <- as.factor(ifelse(DATA$Passing == 1, "yes", "no"))
 
 DATA <- DATA %>% select(1:5, 11)
 
+train_rows <- sample(1:nrow(DATA), size = nrow(DATA) / 2
+                     , replace = F)
+
+train_set <- DATA[train_rows,]
+test_set <- DATA[-train_rows,]
+
 ```
 
 ```{r decision tree}
 
-ExamTree <- rpart(Passing.fac ~ ., data = DATA)
+set.seed(542)
+
+ExamTree <- rpart(Passing.fac ~ ., data = train_set)
 ExamTree
 prp(ExamTree, box.palette = "Reds", tweak = 1.2)
+
+results <- predict(ExamTree, test_set, type="class")
+confusionMatrix(test_set$Passing.fac, results)
 
 ```
 
 ```{r decision tree with cross validation}
 
 set.seed(542)
-
-train_rows <- sample(1:nrow(DATA), size = nrow(DATA) / 2
-                     , replace = F)
-
-train_set <- DATA[train_rows,]
-test_set <- DATA[-train_rows,]
 
 tC <- trainControl(method = "cv", 
              number = 10, 
@@ -57,7 +64,9 @@ dccv <- train(Passing.fac ~ .,
 
 prp(dccv$finalModel, box.palette = "Reds", tweak = 1.2)
 
-dccv$results
+dccv$results[1, 2]
+
+dccv$results[1, 2] + c(-2, 2) * dccv$results[1, 4]
 
 ```
 
@@ -65,12 +74,6 @@ dccv$results
 ```{r random forest}
 
 set.seed(542)
-
-train_rows <- sample(1:nrow(DATA), size = nrow(DATA) / 2
-                     , replace = F)
-
-train_set <- DATA[train_rows,]
-test_set <- DATA[-train_rows,]
 
 tC <- trainControl(method = "cv", 
              number = 10, 
@@ -85,7 +88,9 @@ rf <- train(Passing.fac ~ .,
             ntree = 50,
             data = train_set)
 
-rf$results
+rf$results[2, 2]
+
+rf$results[2, 2] + c(-2, 2) * dccv$results[2, 4]
 
 ```
 
